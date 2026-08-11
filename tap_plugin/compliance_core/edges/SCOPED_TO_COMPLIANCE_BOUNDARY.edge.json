@@ -2,8 +2,20 @@
   "slug": "SCOPED_TO_COMPLIANCE_BOUNDARY__compliance_core",
   "name": "Scoped To Compliance Boundary",
   "description": "A system component is in scope for a compliance authorization boundary. The component is the source (wildcard); the boundary is the target. 'Everything inside boundary X' is a fan-in query over edges whose target is X.",
-  "targets": ["compliance_core__compliance_boundary"],
+  "targets": [
+    "compliance_core__compliance_boundary"
+  ],
   "default_dimensions": {
     "compliance": "boundary"
+  },
+  "property_schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "kludge": {
+        "type": "string",
+        "description": "V0 auto-membership marker: names the placeholder rule that enrolled this member (currently 'all-aws-accounts-auto-in-boundary-v0', written by samsite's compliance collector). Deliberately still named kludge — the real boundary-membership design (which accounts, who declares, where the rule lives) is an Open Question in the aws_core spec; this field becomes membership_rule when that design lands. Optional so hand-authored membership edges need no marker."
+      }
+    }
   }
 }
