@@ -122,6 +122,7 @@ layer.
 ### Plugin Scope
 ----
 RID: `req-compliance-core-scope`
+
 Status: `Implemented`
 
 `compliance_core` is a **library / substrate** plugin. Its v0 surface is six models and
@@ -134,6 +135,7 @@ compliance regime plugin.
 ### Model Set
 ----
 RID: `req-compliance-core-models`
+
 Status: `Implemented`
 
 Six node types, `entity_type = compliance_core__<name>`, fields carried forward
@@ -158,6 +160,7 @@ unchanged except the `entity_type`/`db_table` rename and the dimension fix
 ### Edge Vocabulary
 ----
 RID: `req-compliance-core-edges`
+
 Status: `Implemented`
 
 Five edges, renamed so the object noun tracks the (now `compliance_`-prefixed) node
@@ -185,6 +188,7 @@ consumers constrain the target in their own queries.
 ### Regime On The Instance
 ----
 RID: `req-compliance-core-regime-neutral`
+
 Status: `Implemented`
 
 Generic models MUST NOT bake a regime into their default dimensions. The model default
@@ -211,6 +215,7 @@ per-instance regime stamping lands with the first minting collector.
 ### Naming Discipline
 ----
 RID: `req-compliance-core-naming`
+
 Status: `Implemented`
 
 Node names carry the `compliance_` domain qualifier for system-wide disambiguation
@@ -225,6 +230,7 @@ semantic domain.
 ### Dependency Direction
 ----
 RID: `req-compliance-core-deps`
+
 Status: `Implemented`
 
 compliance_core depends on nothing above core (`tap_grid`/`tap`). Consumers depend
@@ -236,6 +242,7 @@ compliance_core depends on nothing above core (`tap_grid`/`tap`). Consumers depe
 ### Consumer Retargets
 ----
 RID: `req-compliance-core-consumer-retargets`
+
 Status: `Implemented`
 
 - **samsite** — the compliance collector, `decompose.py`, the `ksi_scoreboard` panel,
@@ -261,6 +268,7 @@ Status: `Implemented`
 ### Extraction & Migration
 ----
 RID: `req-compliance-core-migration`
+
 Status: `Implemented`
 
 Renames `fedramp_20x_ksi__{compliance_artifact, compliance_context, evidence, finding,
@@ -287,6 +295,7 @@ a coordinated multi-repo re-tag across compliance_core + fedramp + samsite.
 ### v0 Non-Goals
 ----
 RID: `req-compliance-core-nongoals`
+
 Status: `Implemented`
 
 - **`ksi_*` vocabulary** (signal/theme/indicator/component/validation/violation) stays
