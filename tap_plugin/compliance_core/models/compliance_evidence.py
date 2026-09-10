@@ -8,11 +8,11 @@ from tap_grid.models import BaseModel
 
 
 class ComplianceEvidence(BaseModel):
-    """Evidence is a supporting artifact attached to a finding via a HAS_COMPLIANCE_EVIDENCE edge.
+    """Evidence is a supporting artifact attached to a finding via a CITES_COMPLIANCE_EVIDENCE edge.
 
     The model is intentionally minimal in v1: name, description, kind. The verdict
     the evidence supports — passing, violation, informational — lives on the
-    HAS_COMPLIANCE_EVIDENCE edge as `support_kind`, not on the evidence record
+    CITES_COMPLIANCE_EVIDENCE edge as `support_kind`, not on the evidence record
     itself. That keeps a single evidence artifact reusable across multiple findings
     with different relationships.
 

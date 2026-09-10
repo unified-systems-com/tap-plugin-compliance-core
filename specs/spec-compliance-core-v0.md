@@ -3,7 +3,7 @@
 > **Status: Phase A + B implemented (2026-07-08).** All six models
 > (`compliance_artifact`, `compliance_context`, `compliance_evidence`,
 > `compliance_finding`, `compliance_exception`, `compliance_boundary`) and all five edges
-> (`HAS_COMPLIANCE_EVIDENCE`, `COVERS_COMPLIANCE_FINDING`, `HAS_COMPLIANCE_FINDING`,
+> (`CITES_COMPLIANCE_EVIDENCE`, `COVERS_COMPLIANCE_FINDING`, `CARRIES_COMPLIANCE_FINDING`,
 > `SCOPED_TO_COMPLIANCE_BOUNDARY`, `CONCERNS_COMPLIANCE_CONTROL`) now live in compliance_core,
 > with the regime-neutral type-marker dimension fix on the moved evidence/finding/exception
 > nodes. fedramp/samsite retarget onto them. The former fedramp bridge edge
@@ -22,8 +22,8 @@
   - **Models** (see `req-compliance-core-models`): `compliance_artifact`,
     `compliance_context`, `compliance_evidence`, `compliance_finding`,
     `compliance_exception`, `compliance_boundary`.
-  - **Edge types** (see `req-compliance-core-edges`): `HAS_COMPLIANCE_EVIDENCE`,
-    `COVERS_COMPLIANCE_FINDING`, `HAS_COMPLIANCE_FINDING`,
+  - **Edge types** (see `req-compliance-core-edges`): `CITES_COMPLIANCE_EVIDENCE`,
+    `COVERS_COMPLIANCE_FINDING`, `CARRIES_COMPLIANCE_FINDING`,
     `SCOPED_TO_COMPLIANCE_BOUNDARY`, `CONCERNS_COMPLIANCE_CONTROL`.
   - **Default dimensions** (see `req-compliance-core-regime-neutral`): a neutral
     per-type marker under the `compliance` key (e.g. `compliance: finding`); the
@@ -61,7 +61,7 @@ is unambiguous system-wide — distinct from a future `crime_scene_evidence` or 
 kind of `exception`. Ownership (the `compliance_core` plugin slug) and semantic domain
 (the `compliance_` name qualifier) are **distinct axes**; the resulting
 `compliance_core__compliance_evidence` entity_type is deliberately explicit. Edge
-verbs name their object with the same qualifier (`HAS_COMPLIANCE_EVIDENCE`) so a slug
+verbs name their object with the same qualifier (`CITES_COMPLIANCE_EVIDENCE`) so a slug
 reads unambiguously and tracks the node type it targets.
 
 **Substrate, depended on downward.** `compliance_core` depends on nothing above core.
@@ -111,7 +111,7 @@ layer.
 | --- | --- | :---: | --- |
 | req-compliance-core-scope | [Plugin Scope](#plugin-scope) | Implemented | Substrate library; six models + five edges; no collector. |
 | req-compliance-core-models | [Model Set](#model-set) | Implemented | `compliance_artifact`, `compliance_context`, `compliance_evidence`, `compliance_finding`, `compliance_exception`, `compliance_boundary`. |
-| req-compliance-core-edges | [Edge Vocabulary](#edge-vocabulary) | Implemented | `HAS_COMPLIANCE_EVIDENCE`, `COVERS_COMPLIANCE_FINDING`, `HAS_COMPLIANCE_FINDING`, `SCOPED_TO_COMPLIANCE_BOUNDARY`, `CONCERNS_COMPLIANCE_CONTROL` (wildcard target). |
+| req-compliance-core-edges | [Edge Vocabulary](#edge-vocabulary) | Implemented | `CITES_COMPLIANCE_EVIDENCE`, `COVERS_COMPLIANCE_FINDING`, `CARRIES_COMPLIANCE_FINDING`, `SCOPED_TO_COMPLIANCE_BOUNDARY`, `CONCERNS_COMPLIANCE_CONTROL` (wildcard target). |
 | req-compliance-core-regime-neutral | [Regime On The Instance](#regime-on-the-instance) | Implemented | Model default is a neutral type marker; regime layered per-instance. Fixes the hardcoded `fedramp-20x` default. |
 | req-compliance-core-naming | [Naming Discipline](#naming-discipline) | Implemented | `compliance_` node-name prefix; edge object noun tracks the node type. |
 | req-compliance-core-deps | [Dependency Direction](#dependency-direction) | Implemented | Downward-only; declared in consumers' `pyproject.toml` + `depends_on`. |
@@ -169,13 +169,23 @@ type. Four move directly with their generic endpoints; the fifth
 
 | edge (compliance_core) | from | endpoints |
 | --- | --- | --- |
-| `HAS_COMPLIANCE_EVIDENCE` | `HAS_EVIDENCE` | `compliance_finding` → `compliance_evidence` |
+| `CITES_COMPLIANCE_EVIDENCE` | `HAS_EVIDENCE` | `compliance_finding` → `compliance_evidence` |
 | `COVERS_COMPLIANCE_FINDING` | `COVERS_FINDING` | `compliance_exception` → `compliance_finding` |
-| `HAS_COMPLIANCE_FINDING` | `HAS_FINDING` | any asset (wildcard source) → `compliance_finding` |
+| `CARRIES_COMPLIANCE_FINDING` | `HAS_FINDING` | any asset (wildcard source) → `compliance_finding` |
 | `SCOPED_TO_COMPLIANCE_BOUNDARY` | `SCOPED_TO_BOUNDARY` | any component (wildcard source) → `compliance_boundary` |
 | `CONCERNS_COMPLIANCE_CONTROL` | `RELATED_INDICATOR` | `compliance_finding` → any control (wildcard target) |
 
-Wildcard **sources** on `HAS_COMPLIANCE_FINDING` and `SCOPED_TO_COMPLIANCE_BOUNDARY` are
+**Renamed 2026-09-10 (Issue# 5 - tap-plugin-compliance-core).** `HAS_COMPLIANCE_EVIDENCE` →
+`CITES_COMPLIANCE_EVIDENCE` and `HAS_COMPLIANCE_FINDING` → `CARRIES_COMPLIANCE_FINDING`: both
+failed core's edge-naming conformance check (`req-tap-plugin-edge-naming`, rule `modal-prefix` —
+a `HAS_` prefix names a state, not the mechanical action). A finding *cites* the evidence that
+supports its verdict; an asset *carries* a finding observed against it. Endpoints, property
+schemas and default dimensions are unchanged. Migration `0003_retire_renamed_edge_types` deletes
+rows of the two retired types on an upgraded grid (their ids derive from the slug, so the next
+collection re-emits them under the new names; nodes are untouched). Consumers that read the old
+slugs (fedramp_20x_ksi panels and grift) retarget in their own repos.
+
+Wildcard **sources** on `CARRIES_COMPLIANCE_FINDING` and `SCOPED_TO_COMPLIANCE_BOUNDARY` are
 deliberate: any asset can carry a finding, any component can be in scope for a boundary,
 across regimes. The wildcard **target** on `CONCERNS_COMPLIANCE_CONTROL` is the mirror
 image: a finding can concern a control in any regime's catalog — a FedRAMP `ksi_indicator`
@@ -221,7 +231,7 @@ Status: `Implemented`
 Node names carry the `compliance_` domain qualifier for system-wide disambiguation
 (`compliance_evidence` vs a future `crime_scene_evidence`). Edge slugs name their
 object with the same qualifier so the verb tracks the node type it targets
-(`HAS_COMPLIANCE_EVIDENCE`, not `HAS_EVIDENCE`). This is the "name the specific object"
+(`CITES_COMPLIANCE_EVIDENCE`, not `HAS_EVIDENCE`). This is the "name the specific object"
 discipline from the add-edge skill, not redundant endpoint repetition: the object's
 actual type name *is* `compliance_evidence`. The doubled `compliance_core__compliance_*`
 entity_type is intentional — the plugin slug is ownership, the name qualifier is

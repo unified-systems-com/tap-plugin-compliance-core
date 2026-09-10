@@ -1,4 +1,4 @@
-"""Behavior tests for the ComplianceEvidence model and HAS_COMPLIANCE_EVIDENCE edge."""
+"""Behavior tests for the ComplianceEvidence model and CITES_COMPLIANCE_EVIDENCE edge."""
 
 from __future__ import annotations
 
@@ -93,7 +93,7 @@ class TestEvidenceModel:
 
 
 @pytest.mark.django_db
-class TestHasEvidenceEdge:
+class TestCitesEvidenceEdge:
     def _make_evidence(self, ctx, name: str = "ev") -> str:
         op = WriteOperation(
             verb="create_node",
@@ -110,13 +110,13 @@ class TestHasEvidenceEdge:
             verb="create_edge",
             from_target=str(finding.entity_id),
             to_target=ev_id,
-            edge_type="HAS_COMPLIANCE_EVIDENCE__compliance_core",
+            edge_type="CITES_COMPLIANCE_EVIDENCE__compliance_core",
             payload={"properties": {"support_kind": "passing"}},
         )
         result = write_batch([op], caller_context=ctx)
         assert result.results[0].success
         edge = Edge.objects.get(entity_id=result.results[0].entity_id)
-        assert edge.edge_type == "HAS_COMPLIANCE_EVIDENCE__compliance_core"
+        assert edge.edge_type == "CITES_COMPLIANCE_EVIDENCE__compliance_core"
         assert edge.properties["support_kind"] == "passing"
 
     def test_create_violation_edge(self, ctx, finding):
@@ -125,7 +125,7 @@ class TestHasEvidenceEdge:
             verb="create_edge",
             from_target=str(finding.entity_id),
             to_target=ev_id,
-            edge_type="HAS_COMPLIANCE_EVIDENCE__compliance_core",
+            edge_type="CITES_COMPLIANCE_EVIDENCE__compliance_core",
             payload={"properties": {"support_kind": "violation"}},
         )
         result = write_batch([op], caller_context=ctx)
@@ -137,7 +137,7 @@ class TestHasEvidenceEdge:
             verb="create_edge",
             from_target=str(finding.entity_id),
             to_target=ev_id,
-            edge_type="HAS_COMPLIANCE_EVIDENCE__compliance_core",
+            edge_type="CITES_COMPLIANCE_EVIDENCE__compliance_core",
             payload={"properties": {"support_kind": "informational"}},
         )
         result = write_batch([op], caller_context=ctx)
@@ -149,7 +149,7 @@ class TestHasEvidenceEdge:
             verb="create_edge",
             from_target=str(finding.entity_id),
             to_target=ev_id,
-            edge_type="HAS_COMPLIANCE_EVIDENCE__compliance_core",
+            edge_type="CITES_COMPLIANCE_EVIDENCE__compliance_core",
             payload={"properties": {"support_kind": "bogus"}},
         )
         result = write_batch([op], caller_context=ctx)
@@ -161,7 +161,7 @@ class TestHasEvidenceEdge:
             verb="create_edge",
             from_target=str(finding.entity_id),
             to_target=ev_id,
-            edge_type="HAS_COMPLIANCE_EVIDENCE__compliance_core",
+            edge_type="CITES_COMPLIANCE_EVIDENCE__compliance_core",
             payload={"properties": {}},
         )
         result = write_batch([op], caller_context=ctx)
@@ -173,7 +173,7 @@ class TestHasEvidenceEdge:
             verb="create_edge",
             from_target=str(finding.entity_id),
             to_target=ev_id,
-            edge_type="HAS_COMPLIANCE_EVIDENCE__compliance_core",
+            edge_type="CITES_COMPLIANCE_EVIDENCE__compliance_core",
             payload={"properties": {"support_kind": "passing", "rogue": "field"}},
         )
         result = write_batch([op], caller_context=ctx)
@@ -185,7 +185,7 @@ class TestHasEvidenceEdge:
             verb="create_edge",
             from_target=str(finding.entity_id),
             to_target=ev_id,
-            edge_type="HAS_COMPLIANCE_EVIDENCE__compliance_core",
+            edge_type="CITES_COMPLIANCE_EVIDENCE__compliance_core",
             payload={"properties": {"support_kind": "passing"}},
         )
         result = write_batch([op], caller_context=ctx)

@@ -16,8 +16,8 @@ compliance_core__compliance_exception = "tap_plugin.compliance_core.models.compl
 compliance_core__compliance_boundary = "tap_plugin.compliance_core.models.compliance_boundary.ComplianceBoundary"
 
 [edges]
-HAS_COMPLIANCE_EVIDENCE__compliance_core = "edges/HAS_COMPLIANCE_EVIDENCE.edge.json"
+CITES_COMPLIANCE_EVIDENCE__compliance_core = "edges/CITES_COMPLIANCE_EVIDENCE.edge.json"
 COVERS_COMPLIANCE_FINDING__compliance_core = "edges/COVERS_COMPLIANCE_FINDING.edge.json"
-HAS_COMPLIANCE_FINDING__compliance_core = "edges/HAS_COMPLIANCE_FINDING.edge.json"
+CARRIES_COMPLIANCE_FINDING__compliance_core = "edges/CARRIES_COMPLIANCE_FINDING.edge.json"
 SCOPED_TO_COMPLIANCE_BOUNDARY__compliance_core = "edges/SCOPED_TO_COMPLIANCE_BOUNDARY.edge.json"
 CONCERNS_COMPLIANCE_CONTROL__compliance_core = "edges/CONCERNS_COMPLIANCE_CONTROL.edge.json"
