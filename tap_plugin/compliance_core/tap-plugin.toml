@@ -1,5 +1,6 @@
 manifest_version = "0"
 plugin_version = "0.1.0"
+requires_tap = ">=0.1.5"
 slug = "compliance_core"
 name = "TAP Compliance Core"
 description = "Regime-agnostic compliance vocabulary — artifacts, per-regime context, evidence, findings, exceptions, and boundaries that every compliance regime (FedRAMP 20x, SOC2, CMMC, ISO 27001) shares. Substrate; consumers depend on it downward."
@@ -21,3 +22,8 @@ COVERS_COMPLIANCE_FINDING__compliance_core = "edges/COVERS_COMPLIANCE_FINDING.ed
 CARRIES_COMPLIANCE_FINDING__compliance_core = "edges/CARRIES_COMPLIANCE_FINDING.edge.json"
 SCOPED_TO_COMPLIANCE_BOUNDARY__compliance_core = "edges/SCOPED_TO_COMPLIANCE_BOUNDARY.edge.json"
 CONCERNS_COMPLIANCE_CONTROL__compliance_core = "edges/CONCERNS_COMPLIANCE_CONTROL.edge.json"
+
+[[boot.records]]
+name = "ci"
+description = "RESERVED NAME (req-boot-bootstrap-ci-record): the stack this plugin's own tests run in — depends_on closure + self, offline, credential-free. The consumer flips self to editable."
+sha256 = "55636a3b842d98d89e0efffb3f940fbe24f58f286341519127e80f7aee8f2bc8"
