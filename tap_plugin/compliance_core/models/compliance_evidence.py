@@ -19,10 +19,22 @@ class ComplianceEvidence(BaseModel):
     Regime-agnostic substrate: evidence supports a finding under any regime; the
     regime is layered per-instance, not baked into the model.
 
+    Identity (`req-compliance-core-identity`): found again by the producer that asserted it
+    and that producer's own key — `("source", "source_key")`. A producer that writes neither
+    gets a fresh node every run rather than an error, so writing them is the data contract a
+    minting plugin owes this one.
+
     Spec: plugins/compliance_core/specs/spec-compliance-core-v0.md
     """
 
     ENTITY_TYPE: ClassVar[str] = "compliance_core__compliance_evidence"
+    # WHO produced it, and WHAT THEY CALL IT. `name`, `description` and `kind` describe the
+    # material, not which piece of material it is: two scanner outputs from consecutive runs
+    # share all three. The producing system is the only thing that can say "this is the same
+    # artefact I showed you last time", so it says it in a column (Issue# 8 -
+    # tap-plugin-compliance-core). KEYLESS was refused: evidence IS re-observed — every rescan
+    # re-attaches the same material — and a keyless ref mints a new node every run.
+    NATURAL_KEY: ClassVar[tuple[str, ...]] = ("source", "source_key")
     ENTITY_NAME: ClassVar[str] = "Evidence"
     ENTITY_DESCRIPTION: ClassVar[str] = (
         "A supporting artifact for a compliance finding — screenshot, scanner output, "
@@ -41,12 +53,16 @@ class ComplianceEvidence(BaseModel):
     ]
 
     FIELD_CRUD_SCHEMA: ClassVar[dict[str, Any]] = {
+        "source": {"type": "string", "maxLength": 64},
+        "source_key": {"type": "string", "maxLength": 512},
         "name": {"type": "string", "minLength": 1},
         "description": {"type": "string"},
         "kind": {"type": "string", "enum": _KIND_VALUES},
     }
 
     FIELD_VALIDATION_SCHEMA: ClassVar[dict[str, Any]] = {
+        "source": {"validation": "jsonschema", "schema": {"type": "string", "maxLength": 64}},
+        "source_key": {"validation": "jsonschema", "schema": {"type": "string", "maxLength": 512}},
         "name": {
             "validation": "jsonschema",
             "schema": {"type": "string", "minLength": 1},
@@ -59,6 +75,13 @@ class ComplianceEvidence(BaseModel):
     }
     CREATE_REQUIRED: ClassVar[list[str]] = ["name", "kind"]
 
+    #: The producer that asserted this evidence — the plugin slug of whoever minted it
+    #: ("github_core"). Half of the natural key: it namespaces `source_key`.
+    source = models.CharField(max_length=64, blank=True, default="")
+    #: What the producing system calls this evidence, verbatim ("acme/app#code_scanning#7#sarif").
+    #: Opaque here: only the producer's namespace gives it meaning, and compliance_core
+    #: never parses it.
+    source_key = models.CharField(max_length=512, blank=True, default="")
     name = models.CharField(max_length=255, blank=True, default="")
     description = models.TextField(blank=True, default="")
     kind = models.CharField(max_length=32, blank=True, default="other", db_index=True)

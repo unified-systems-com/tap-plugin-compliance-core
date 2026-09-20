@@ -19,10 +19,26 @@ class ComplianceFinding(BaseModel):
     Regime-agnostic substrate: a finding is a finding under any regime (FedRAMP,
     SOC2, CMMC, ISO). The regime is layered per-instance, not baked into the model.
 
+    Identity (`req-compliance-core-identity`): a finding is found again by the producer
+    that asserted it and the key that producer uses — `("source", "source_key")`. That is
+    the data contract a minting plugin owes this one: a producer that writes neither field
+    gets a FRESH node on every run rather than an error, because a search over holes is
+    honestly "not found" rather than a match on nothing.
+
     Spec: plugins/compliance_core/specs/spec-compliance-core-v0.md
     """
 
     ENTITY_TYPE: ClassVar[str] = "compliance_core__compliance_finding"
+    # WHO said it, and WHAT THEY CALL IT. Nothing else on this model identifies anything:
+    # `name`, `summary`, `description` and `status` all describe the verdict, and two scanners
+    # can produce the same words about different places. The facts that make a finding findable
+    # again live in the producer's world — `acme/app#code_scanning#7` for github_core — so the
+    # model carries them as columns rather than leaving them only inside a producer's id recipe,
+    # where the generated search could never filter them (Issue# 8 - tap-plugin-compliance-core,
+    # ruled by George 2026-09-20; the same answer as github-core#164/#165 one level up).
+    # `source` namespaces `source_key`, so two producers can never collide and neither has to
+    # know the other's keying rules. compliance_core never parses `source_key`.
+    NATURAL_KEY: ClassVar[tuple[str, ...]] = ("source", "source_key")
     ENTITY_NAME: ClassVar[str] = "Finding"
     ENTITY_DESCRIPTION: ClassVar[str] = (
         "A single instance of non-compliance or risk observed against an asset, "
@@ -34,6 +50,8 @@ class ComplianceFinding(BaseModel):
     _STATUS_VALUES = ["open", "resolved"]
 
     FIELD_CRUD_SCHEMA: ClassVar[dict[str, Any]] = {
+        "source": {"type": "string", "maxLength": 64},
+        "source_key": {"type": "string", "maxLength": 512},
         "name": {"type": "string", "minLength": 1},
         "summary": {"type": "string"},
         "description": {"type": "string"},
@@ -41,6 +59,8 @@ class ComplianceFinding(BaseModel):
     }
 
     FIELD_VALIDATION_SCHEMA: ClassVar[dict[str, Any]] = {
+        "source": {"validation": "jsonschema", "schema": {"type": "string", "maxLength": 64}},
+        "source_key": {"validation": "jsonschema", "schema": {"type": "string", "maxLength": 512}},
         "name": {
             "validation": "jsonschema",
             "schema": {"type": "string", "minLength": 1},
@@ -54,6 +74,13 @@ class ComplianceFinding(BaseModel):
     }
     CREATE_REQUIRED: ClassVar[list[str]] = ["name"]
 
+    #: The producer that asserted this finding — the plugin slug of whoever minted it
+    #: ("github_core"). Half of the natural key: it namespaces `source_key`.
+    source = models.CharField(max_length=64, blank=True, default="")
+    #: What the producing system calls this finding, verbatim ("acme/app#code_scanning#7").
+    #: Opaque here: only the producer's namespace gives it meaning, and compliance_core
+    #: never parses it.
+    source_key = models.CharField(max_length=512, blank=True, default="")
     name = models.CharField(max_length=255, blank=True, default="")
     summary = models.CharField(max_length=500, blank=True, default="")
     description = models.TextField(blank=True, default="")

@@ -20,11 +20,25 @@ class ComplianceArtifact(BaseModel):
     minting collector stamps the regime dimension per-instance; the model
     default carries only a neutral type marker.
 
+    Identity (`req-compliance-core-identity`): found again by the fetcher that retrieved it
+    and that fetcher's own key — `("source", "source_key")`, NOT `source_url`; see the
+    declaration below for why the fetch address is not the document's identity.
+
     Spec: plugins/compliance_core/specs/spec-compliance-core-v0.md
     (req-compliance-core-models).
     """
 
     ENTITY_TYPE: ClassVar[str] = "compliance_core__compliance_artifact"
+    # WHO fetched it, and WHAT THEY CALL IT. `source_url` was considered as the key and refused:
+    # it records WHERE a fetch went, which is not the same fact as WHICH DOCUMENT this is. A
+    # `…/latest/ssp.json` URL serves a different document every quarter, and a document built
+    # locally has no URL at all — so keying on the URL would either collapse successive
+    # documents into one row or leave a whole class of artifacts unfindable. The fetcher is the
+    # only party that knows which of its documents this is, so it says so: `source_key` is
+    # whatever it calls this artifact (often, but not necessarily, the URL it used), and
+    # `source_url` keeps the fetch address as the observation it is (Issue# 8 -
+    # tap-plugin-compliance-core).
+    NATURAL_KEY: ClassVar[tuple[str, ...]] = ("source", "source_key")
     ENTITY_NAME: ClassVar[str] = "Compliance Artifact"
     ENTITY_DESCRIPTION: ClassVar[str] = (
         "A fetched compliance rendering kept whole — an OSCAL SSP, OSCAL "
@@ -49,6 +63,8 @@ class ComplianceArtifact(BaseModel):
     _KIND_VALUES = ["oscal_ssp", "oscal_poam", "iiw", ""]
 
     FIELD_CRUD_SCHEMA: ClassVar[dict[str, Any]] = {
+        "source": {"type": "string", "maxLength": 64},
+        "source_key": {"type": "string", "maxLength": 512},
         "name": {"type": "string", "minLength": 1},
         "kind": {"type": "string"},
         "source_url": {"type": "string"},
@@ -63,6 +79,8 @@ class ComplianceArtifact(BaseModel):
     }
 
     FIELD_VALIDATION_SCHEMA: ClassVar[dict[str, Any]] = {
+        "source": {"validation": "jsonschema", "schema": {"type": "string", "maxLength": 64}},
+        "source_key": {"validation": "jsonschema", "schema": {"type": "string", "maxLength": 512}},
         "name": {"validation": "jsonschema", "schema": {"type": "string", "minLength": 1}},
         "kind": {"validation": "jsonschema", "schema": {"type": "string", "enum": _KIND_VALUES}},
         "size_bytes": {"validation": "jsonschema", "schema": {"type": ["integer", "null"]}},
@@ -70,6 +88,14 @@ class ComplianceArtifact(BaseModel):
     }
     CREATE_REQUIRED: ClassVar[list[str]] = ["name", "kind"]
 
+    #: The producer that asserted this artifact — the slug of the plugin that minted it,
+    #: never a display name. Half of the natural key: it namespaces `source_key`, so
+    #: two producers can never collide.
+    source = models.CharField(max_length=64, blank=True, default="")
+    #: What the producing system calls this artifact, verbatim ("https://acme.example/ssp.json@v3").
+    #: Opaque here: only the producer's namespace gives it meaning, and compliance_core
+    #: never parses it.
+    source_key = models.CharField(max_length=512, blank=True, default="")
     name = models.CharField(max_length=255, blank=True, default="")
     kind = models.CharField(max_length=32, blank=True, default="", db_index=True)
     source_url = models.CharField(max_length=512, blank=True, default="")

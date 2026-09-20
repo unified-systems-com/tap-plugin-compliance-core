@@ -33,11 +33,31 @@ class ComplianceContext(BaseModel):
     `regime` (or by the matching `compliance` dimension) to select the
     relevant context for a given framework's panels.
 
+    Identity (`req-compliance-core-identity`): found again by `regime` alone — this type keys
+    on a field it already carries, because a context is this Grid's own posture rather than an
+    external object somebody else names.
+
     Spec: plugins/compliance_core/specs/spec-compliance-core-v0.md
     (req-compliance-core-models).
     """
 
     ENTITY_TYPE: ClassVar[str] = "compliance_core__compliance_context"
+    # THE REGIME, and nothing else — this type keys on a field it already carries, which is why
+    # it does not take the `source`/`source_key` shape the producer-minted types do (Issue# 8 -
+    # tap-plugin-compliance-core). A context is not somebody else's object observed from
+    # outside; it is THIS Grid's posture under one regime, and the model's stated cardinality is
+    # one context per regime per Grid. Declaring `("regime",)` makes that invariant the search:
+    # a second write of the FedRAMP posture finds the first one and updates it instead of
+    # standing up a rival context, and `fedramp_class` — the value most likely to be corrected —
+    # stays out of the key, because a key must not be the thing that changes.
+    #
+    # NOT KEYLESS: posture is re-asserted (a re-seed, a re-run of whatever declares it), and a
+    # keyless ref would mint a new context each time. The caveat, stated rather than buried: the
+    # generated search spans the typed table, not one Grid, so if federation ever lands a FOREIGN
+    # grid's context in this table the two would match and `AmbiguousIdentity` would refuse the
+    # batch by name. That is the fail-loud end of the trade, and it is the right one — the
+    # alternative silently merges two grids' postures.
+    NATURAL_KEY: ClassVar[tuple[str, ...]] = ("regime",)
     ENTITY_NAME: ClassVar[str] = "Compliance Context"
     ENTITY_DESCRIPTION: ClassVar[str] = (
         "Per-regime compliance posture metadata on a Grid. Each instance "
