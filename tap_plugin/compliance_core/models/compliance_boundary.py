@@ -23,10 +23,24 @@ class ComplianceBoundary(BaseModel):
     (impact level, authorization dates, authorizing official) becomes typed
     fields when a consumer needs them rather than a speculative JSON blob now.
 
+    Identity (`req-compliance-core-identity`): found again by the producer that declared it
+    and that producer's own key — `("source", "source_key")`. A producer that writes neither
+    gets a fresh node every run rather than an error, so writing them is the data contract a
+    minting plugin owes this one.
+
     Spec: plugins/compliance_core/specs/spec-compliance-core-v0.md
     """
 
     ENTITY_TYPE: ClassVar[str] = "compliance_core__compliance_boundary"
+    # WHO declared it, and WHAT THEY CALL IT — the same shape as the other producer-minted
+    # types, and for the same reason. A boundary is the perimeter of ONE authorization, and the
+    # authorization is an external object (an ATO package, an audit scope) held in someone
+    # else's system; that system's reference for it is the stable handle. `name` was considered
+    # and refused: a boundary is renamed as programs are renamed, and a key over `name` would
+    # fork one boundary into two the first time that happened (Issue# 8 -
+    # tap-plugin-compliance-core). KEYLESS was refused for the same reason as the others — an
+    # authorization package re-read is a re-observation, not a new boundary.
+    NATURAL_KEY: ClassVar[tuple[str, ...]] = ("source", "source_key")
     ENTITY_NAME: ClassVar[str] = "Authorization Boundary"
     ENTITY_DESCRIPTION: ClassVar[str] = (
         "An authorization boundary — the perimeter of system components in "
@@ -46,16 +60,28 @@ class ComplianceBoundary(BaseModel):
     }
 
     FIELD_CRUD_SCHEMA: ClassVar[dict[str, Any]] = {
+        "source": {"type": "string", "maxLength": 64},
+        "source_key": {"type": "string", "maxLength": 512},
         "name": {"type": "string", "minLength": 1},
         "description": {"type": "string"},
     }
 
     FIELD_VALIDATION_SCHEMA: ClassVar[dict[str, Any]] = {
+        "source": {"validation": "jsonschema", "schema": {"type": "string", "maxLength": 64}},
+        "source_key": {"validation": "jsonschema", "schema": {"type": "string", "maxLength": 512}},
         "name": {"validation": "jsonschema", "schema": {"type": "string", "minLength": 1}},
         "description": {"validation": "jsonschema", "schema": {"type": "string"}},
     }
     CREATE_REQUIRED: ClassVar[list[str]] = ["name"]
 
+    #: The producer that asserted this boundary — the slug of the plugin that minted it,
+    #: never a display name. Half of the natural key: it namespaces `source_key`, so
+    #: two producers can never collide.
+    source = models.CharField(max_length=64, blank=True, default="")
+    #: What the producing system calls this boundary, verbatim ("fedramp/acme-saas-ato").
+    #: Opaque here: only the producer's namespace gives it meaning, and compliance_core
+    #: never parses it.
+    source_key = models.CharField(max_length=512, blank=True, default="")
     name = models.CharField(max_length=255, blank=True, default="")
     description = models.TextField(blank=True, default="")
 

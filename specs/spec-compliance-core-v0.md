@@ -12,6 +12,12 @@
 > controls across regimes; fedramp's panels supply the `ksi_indicator` target. Migrations `0001`/`0002`
 > (compliance_core) + `0004`/`0005` (fedramp deletes) apply clean; all targeted suites +
 > mypy ratchet green.
+>
+> **Assigned identity adopted 2026-09-20** (`req-compliance-core-identity`, Issue# 8 -
+> tap-plugin-compliance-core): every model declares `NATURAL_KEY`, the five
+> producer-minted types gain neutral `source` / `source_key` columns and key on them,
+> `compliance_context` keys on `regime`, and the core floor rises to `>= 0.2.0`.
+> Migration `0004` adds the fields and the generated composite search indexes.
 
 ## Plugin Identity
 
@@ -112,6 +118,7 @@ layer.
 | req-compliance-core-scope | [Plugin Scope](#plugin-scope) | Implemented | Substrate library; six models + five edges; no collector. |
 | req-compliance-core-models | [Model Set](#model-set) | Implemented | `compliance_artifact`, `compliance_context`, `compliance_evidence`, `compliance_finding`, `compliance_exception`, `compliance_boundary`. |
 | req-compliance-core-edges | [Edge Vocabulary](#edge-vocabulary) | Implemented | `CITES_COMPLIANCE_EVIDENCE`, `COVERS_COMPLIANCE_FINDING`, `CARRIES_COMPLIANCE_FINDING`, `SCOPED_TO_COMPLIANCE_BOUNDARY`, `CONCERNS_COMPLIANCE_CONTROL` (wildcard target). |
+| req-compliance-core-identity | [Assigned Identity](#assigned-identity) | Implemented | Every model declares `NATURAL_KEY`; the five producer-minted types key on `("source", "source_key")`, `compliance_context` on `("regime",)`. Floor `requires_tap >= 0.2.0`. |
 | req-compliance-core-regime-neutral | [Regime On The Instance](#regime-on-the-instance) | Implemented | Model default is a neutral type marker; regime layered per-instance. Fixes the hardcoded `fedramp-20x` default. |
 | req-compliance-core-naming | [Naming Discipline](#naming-discipline) | Implemented | `compliance_` node-name prefix; edge object noun tracks the node type. |
 | req-compliance-core-deps | [Dependency Direction](#dependency-direction) | Implemented | Downward-only; declared in consumers' `pyproject.toml` + `depends_on`. |
@@ -143,19 +150,81 @@ faithfully from the `fedramp_20x_ksi` originals:
 
 | entity_type | from | key fields |
 | --- | --- | --- |
-| `compliance_core__compliance_artifact` | `fedramp_20x_ksi__compliance_artifact` | `kind` (oscal_ssp/oscal_poam/iiw), `source_url`, `content` (blob), signature-verification metadata |
-| `compliance_core__compliance_context` | `fedramp_20x_ksi__compliance_context` | `regime` (discriminator), `fedramp_class` (+ future per-regime posture fields) |
-| `compliance_core__compliance_evidence` | `fedramp_20x_ksi__evidence` | `name`, `description`, `kind` |
-| `compliance_core__compliance_finding` | `fedramp_20x_ksi__finding` | `name`, `summary`, `description`, `status` |
-| `compliance_core__compliance_exception` | `fedramp_20x_ksi__exception` | `name`, `description`, `status` |
-| `compliance_core__compliance_boundary` | `fedramp_20x_ksi__boundary` | `name`, `description` |
+| `compliance_core__compliance_artifact` | `fedramp_20x_ksi__compliance_artifact` | `kind` (oscal_ssp/oscal_poam/iiw), `source_url`, `content` (blob), signature-verification metadata, `source` + `source_key` (identity) |
+| `compliance_core__compliance_context` | `fedramp_20x_ksi__compliance_context` | `regime` (discriminator **and identity**), `fedramp_class` (+ future per-regime posture fields) |
+| `compliance_core__compliance_evidence` | `fedramp_20x_ksi__evidence` | `name`, `description`, `kind`, `source` + `source_key` (identity) |
+| `compliance_core__compliance_finding` | `fedramp_20x_ksi__finding` | `name`, `summary`, `description`, `status`, `source` + `source_key` (identity) |
+| `compliance_core__compliance_exception` | `fedramp_20x_ksi__exception` | `name`, `description`, `status`, `source` + `source_key` (identity) |
+| `compliance_core__compliance_boundary` | `fedramp_20x_ksi__boundary` | `name`, `description`, `source` + `source_key` (identity) |
 
 `compliance_artifact` and `compliance_context` keep their names (already
 `compliance_`-prefixed). `boundary` moves here because every compliance regime scopes
 to some authorization/system boundary — it is not FedRAMP-specific. Display, icons,
 CRUD/validation schemas, and `CREATE_REQUIRED` carry forward from the originals
 unchanged except the `entity_type`/`db_table` rename and the dimension fix
-(`req-compliance-core-regime-neutral`).
+(`req-compliance-core-regime-neutral`). The `source` / `source_key` pair added on
+2026-09-20 is the one departure from faithful carry-forward: the producer-minted types
+had no field that identified anything, so their identity had nowhere to live
+(`req-compliance-core-identity`).
+
+### Assigned Identity
+----
+RID: `req-compliance-core-identity`
+
+Status: `Implemented`
+
+Core assigns entity ids (UUIDv7 at first sight) and finds a row again by the **search
+generated from the owning model's `NATURAL_KEY`** (`req-grid-entity-natural-key`). A
+producer names a node by a batch-local `ref` and the GRIFT importer resolves it against
+that declaration — **the declaration lives on the model, so it is compliance_core's to
+make no matter which plugin writes the node.** A type that has not declared is refused
+outright: *undeclared is never keyless*. That refusal is why `github_core` held
+`compliance_core__compliance_finding` back from the adoption while every other type it
+mints moved (`tap-plugin-github-core#162`/`#163`, Issue# 8 - tap-plugin-compliance-core).
+
+**The dependency inverts rather than disappearing.** Under derived ids the producer
+decided the key, because somebody had to compute an identifier and only the producer held
+the values. Under assigned identity **compliance_core decides the key** and the producer
+owes the **values** the declaration names. The ref string itself does not participate:
+the importer passes `resolve_identity` the entity type and the node payload, and the ref
+is a batch-local label used to wire endpoints inside the document.
+
+| declaration | types | why |
+| --- | --- | --- |
+| `("source", "source_key")` | `compliance_finding`, `compliance_evidence`, `compliance_exception`, `compliance_artifact`, `compliance_boundary` | Minted by other plugins. Nothing these models already carry identifies anything: `name`/`summary`/`description` describe, and `status` is the thing that changes. `source` is the producer's slug — who is speaking — and `source_key` is what that system calls the object, verbatim and opaque here. A producer's slug namespaces its own keys, so two producers can never collide and neither has to know the other's keying rules; provenance becomes queryable as a side effect. |
+| `("regime",)` | `compliance_context` | Keys on a field it already carries. A context is not somebody else's object observed from outside — it is **this Grid's** posture under one regime, and the model's stated cardinality is one context per regime per Grid. The declaration makes that invariant the search. `fedramp_class` stays out of the key: it is the value most likely to be corrected. |
+
+**`KEYLESS` was refused for all six**, deliberately. A keyless ref mints a **new node
+every run**, so a re-scan would duplicate every finding rather than re-observe it — worse
+than the status quo it replaces. Every one of these types is genuinely re-observed: a
+scanner re-runs, an artifact is re-fetched, an exception register is re-imported, a
+posture is re-asserted.
+
+**The failure mode this shape is designed against, stated rather than discovered.** A
+producer that supplies **none** of the constituting fields gets absent values; the
+generated search answers "not found" without querying (a hole is never a match) and a
+fresh node is assigned. That is **duplicates, not a hard error** — so the constituting
+fields are ones every producer can and will write, which is the argument for neutral
+`source` / `source_key` over anything borrowed from one producer's world. Neither field
+is in `CREATE_REQUIRED`: a node authored by hand inside TAP carries neither, is created
+once by an explicit write, and is never re-observed.
+
+**One-way door.** A natural key cannot be changed once nodes have been assigned ids under
+it. It is safe to land here because nothing resolves against it until a producer emits a
+ref, and that takes this release plus a pin bump in the consumer.
+
+**Sequencing across repositories.** compliance_core declares → **releases** → `github_core`
+bumps its pin and flips `code_scanning_finding_id` from a derived uuid5 to a ref, writing
+`source="github_core"` and `source_key="{full_name}#code_scanning#{number}"`. A ref cannot
+resolve against a declaration that is not in the pinned version.
+
+| ACID | Title | Status | Description |
+| --- | --- | :---: | --- |
+| req-compliance-core-identity-1 | Every model declares | Implemented | All six models declare `NATURAL_KEY`; a guard test fails on an undeclared registered type. |
+| req-compliance-core-identity-2 | Producer-neutral key | Implemented | `("source", "source_key")` on the five producer-minted types; `source` is the minting plugin's slug, `source_key` is opaque to compliance_core. |
+| req-compliance-core-identity-3 | Context keys on its own field | Implemented | `compliance_context` declares `("regime",)`, expressing one-context-per-regime-per-Grid. |
+| req-compliance-core-identity-4 | Re-observation is one node | Implemented | Two writes of the same source object under one producer resolve to one entity id (proved through `grift_import`, not asserted from reading). |
+| req-compliance-core-identity-5 | Core floor | Implemented | `requires_tap >= 0.2.0` — the release carrying the declaration contract, the generated search and `resolve_identity`. |
 
 ### Edge Vocabulary
 ----
